@@ -1,0 +1,26 @@
+{
+  "kind": "mob",
+  "disposition": "neutral",
+  "size": 5,
+  "density": 15,
+  "health": 10,
+  "speed": 4,
+  "rangeMult": 10,
+  "turnRate": 9,
+  "collided": {
+    "doDamage": { "self": true, "other": 0, "allies": 5 }
+  },
+  "onUpdate": ["checkIfDead"],
+  "onDeath": ["dropPetals"],
+  "lootTable": {
+    "rock_petal": "normal-low"
+  },
+  "visual": {
+    "type": "sprite",
+    "texture": "Assets/textures/entities/baby_ant.png",
+    "scale": 1,
+    "offsetX": 0,
+    "offsetY": 0,
+    "directionOffset": 0
+  }
+}

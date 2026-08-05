@@ -1,0 +1,26 @@
+{
+  "kind": "mob",
+  "disposition": "hostile",
+  "size": 15,
+  "density": 35,
+  "health": 25,
+  "speed": 3,
+  "rangeMult": 10,
+  "turnRate": 6,
+  "collided": {
+    "doDamage": { "self": true, "other": 0, "allies": 10 }
+  },
+  "onUpdate": ["checkIfDead"],
+  "onDeath": ["dropPetals"],
+  "lootTable": {
+    "rock_petal": "normal-mid"
+  },
+  "visual": {
+    "type": "sprite",
+    "texture": "Assets/textures/entities/soldier_ant.png",
+    "scale": 1,
+    "offsetX": 0,
+    "offsetY": 0,
+    "directionOffset": 0
+  }
+}

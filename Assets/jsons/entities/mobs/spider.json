@@ -1,0 +1,25 @@
+{
+  "kind": "mob",
+  "disposition": "hostile",
+  "size": 25,
+  "density": 40,
+  "health": 25,
+  "speed": 5,
+  "rangeMult": 12,
+  "turnRate": 9,
+  "collided": {
+    "doDamage": { "self": true, "other": 0, "allies": 10 }
+  },
+  "onUpdate": ["checkIfDead"],
+  "onDeath": ["dropPetals"],
+  "lootTable": {
+    "rock_petal": "normal-high"
+  },
+  "visual": {
+    "type": "sprite",
+    "scale": 1,
+    "offsetX": 0,
+    "offsetY": 0,
+    "directionOffset": 0
+  }
+}

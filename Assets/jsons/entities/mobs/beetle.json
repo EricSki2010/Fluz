@@ -1,0 +1,26 @@
+{
+  "kind": "mob",
+  "disposition": "neutral",
+  "size": 40,
+  "density": 60,
+  "health": 50,
+  "speed": 2.5,
+  "rangeMult": 8,
+  "turnRate": 4,
+  "collided": {
+    "doDamage": { "self": true, "other": 0, "allies": 10 }
+  },
+  "onUpdate": ["checkIfDead"],
+  "onDeath": ["dropPetals"],
+  "lootTable": {
+    "rock_petal": "normal-mid"
+  },
+  "visual": {
+    "type": "sprite",
+    "texture": "Assets/textures/entities/beetle.png",
+    "scale": 1,
+    "offsetX": 0,
+    "offsetY": 0,
+    "directionOffset": 0
+  }
+}

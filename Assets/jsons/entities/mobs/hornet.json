@@ -1,0 +1,26 @@
+{
+  "kind": "mob",
+  "disposition": "hostile",
+  "size": 30,
+  "density": 30,
+  "health": 35,
+  "speed": 4,
+  "rangeMult": 11,
+  "turnRate": 7,
+  "collided": {
+    "doDamage": { "self": true, "other": 0, "allies": 10 }
+  },
+  "onUpdate": ["checkIfDead"],
+  "onDeath": ["dropPetals"],
+  "lootTable": {
+    "rock_petal": "normal-high"
+  },
+  "visual": {
+    "type": "sprite",
+    "texture": "Assets/textures/entities/hornet.png",
+    "scale": 1,
+    "offsetX": 0,
+    "offsetY": 0,
+    "directionOffset": 0
+  }
+}

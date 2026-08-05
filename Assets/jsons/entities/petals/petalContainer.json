@@ -1,0 +1,21 @@
+{
+  "comment": "The petal container: an inert square frame. It has no health, no damage, and no knockback in either direction — collisions are still DETECTED against it (that's not switchable), but nothing comes of them. `density`/`speed`/`rangeMult` are 0 only because Entity multiplies them into derived stats; with knockback off, density is never read at all. `passive` disposition keeps it out of targeting entirely: it never seeks, and hostile mobs only hunt `allied` entities so nothing hunts it. `sizeScalesWithRarity: false` because a container's rarity describes the PETAL inside it, not the box — a legendary drop is a normal-sized box holding a legendary petal, not one four times the player's size.",
+  "kind": "petalContainer",
+  "disposition": "passive",
+  "size": 20,
+  "sizeScalesWithRarity": false,
+  "density": 0,
+  "speed": 0,
+  "rangeMult": 0,
+  "collider": { "type": "polygon", "shape": "petalContainer" },
+  "collided": {
+    "knockback": false
+  },
+  "visual": {
+    "type": "polygon",
+    "fill": "#4a6fa5",
+    "fillFromRarity": true,
+    "strokeScale": 0.06,
+    "zIndex": 30
+  }
+}

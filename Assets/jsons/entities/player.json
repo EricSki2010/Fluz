@@ -1,0 +1,23 @@
+{
+  "kind": "player",
+  "disposition": "allied",
+  "size": 30,
+  "density": 50,
+  "health": 250,
+  "speed": 7,
+  "rangeMult": 10,
+  "turnRate": 0,
+  "orbitSpeed": 2,
+  "collided": {
+    "doDamage": { "self": true, "other": 5 }
+  },
+  "onUpdate": ["reloadPetals"],
+  "visual": {
+    "type": "circle",
+    "fill": "#ffff00",
+    "stroke": "#000000",
+    "strokeWidth": 2,
+    "smooth": 0.5,
+    "zIndex": 20
+  }
+}

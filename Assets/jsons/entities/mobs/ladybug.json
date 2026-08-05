@@ -1,0 +1,26 @@
+{
+  "kind": "mob",
+  "disposition": "passive",
+  "size": 60,
+  "density": 30,
+  "health": 25,
+  "speed": 3.5,
+  "rangeMult": 10,
+  "turnRate": 6,
+  "collided": {
+    "doDamage": { "self": true, "other": 0, "allies": 5 }
+  },
+  "onUpdate": ["checkIfDead"],
+  "onDeath": ["dropPetals"],
+  "lootTable": {
+    "rock_petal": "normal-mid"
+  },
+  "visual": {
+    "type": "sprite",
+    "texture": "Assets/textures/entities/ladybug.png",
+    "scale": 1,
+    "offsetX": 0,
+    "offsetY": 0,
+    "directionOffset": 0
+  }
+}

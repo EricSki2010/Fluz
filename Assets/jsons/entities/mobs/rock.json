@@ -1,0 +1,25 @@
+{
+  "kind": "mob",
+  "disposition": "passive",
+  "size": 40,
+  "density": 200,
+  "health": 100,
+  "speed": 0,
+  "rangeMult": 0,
+  "turnRate": 0,
+  "collider": { "type": "polygon", "shape": "rock" },
+  "collided": {
+    "knockback": { "self": true, "others": true },
+    "doDamage": { "self": true, "other": 0, "allies": 10 }
+  },
+  "onUpdate": ["checkIfDead"],
+  "onDeath": ["dropPetals"],
+  "lootTable": {
+    "rock_petal": "normal-high"
+  },
+  "visual": {
+    "type": "polygon",
+    "fill": "#808080",
+    "strokeScale": 0.05
+  }
+}

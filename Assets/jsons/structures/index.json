@@ -1,0 +1,6 @@
+{
+  "comment": "Manifest of structure ids. The browser can't list a folder, so this is the authoritative roster: add an id here AND drop a matching <id>.json beside it to add a structure. Structures are prebuilt, non-entity world geometry (barriers/walls, etc.) with their own properties — distinct from the spawnable entities in ../entities.",
+  "structures": [
+    "plains"
+  ]
+}

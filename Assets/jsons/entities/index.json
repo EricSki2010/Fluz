@@ -1,0 +1,17 @@
+{
+  "comment": "Manifest of spawnable entities. The browser can't list a folder, so this is the authoritative roster (and its ORDER fixes the binary wire ids — see EntityRegistry). Each entry is a PATH relative to this folder, WITHOUT the .json; the def's id is the basename (so 'mobs/hornet' → id 'hornet'). Add an entry here AND drop a matching <path>.json to add an entity. mobs/ = creatures, petals/ = orbiting petals, player at the root.",
+  "entities": [
+    "mobs/baby_ant",
+    "mobs/worker_ant",
+    "mobs/soldier_ant",
+    "mobs/bee",
+    "mobs/hornet",
+    "mobs/spider",
+    "mobs/beetle",
+    "mobs/ladybug",
+    "mobs/rock",
+    "player",
+    "petals/rock_petal",
+    "petals/petalContainer"
+  ]
+}

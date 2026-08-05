@@ -1,0 +1,90 @@
+{
+  "comment": "Named DROP curves, shared by every mob. A mob def doesn't spell out its own odds — it names a curve per droppable in its `lootTable` block (e.g. \"rock_petal\": \"normal-high\"), so retuning how generous 'normal-high' is retunes every mob that uses it at once. Each curve is keyed by the MOB'S rarity, and each of those is a list of OUTCOMES: one roll picks exactly one entry, and that entry says what you get. `chance` is read as a percentage but rolled against the list's own sum, so a set that doesn't total 100 still behaves sensibly. `count` is how many drop (0 = nothing, and the usual first entry). `rarity` is what rarity they drop AT — omit it and the drop matches the mob's own rarity, which is why most entries here don't need it. A LIST, not an object keyed by chance, because two outcomes can legitimately share a percentage and duplicate JSON keys would silently collapse. `default` covers any rarity a curve doesn't list, which keeps these files short as rarity tiers get added.",
+
+  "tables": {
+    "normal-low": {
+      "default": [
+        { "chance": 90, "count": 0 },
+        { "chance": 10, "count": 1 }
+      ],
+      "common": [
+        { "chance": 95, "count": 0 },
+        { "chance": 5, "count": 1, "rarity": "common" }
+      ],
+      "unusual": [
+        { "chance": 90, "count": 0 },
+        { "chance": 9, "count": 1, "rarity": "common" },
+        { "chance": 1, "count": 1, "rarity": "unusual" }
+      ],
+      "rare": [
+        { "chance": 82, "count": 0 },
+        { "chance": 14, "count": 1, "rarity": "unusual" },
+        { "chance": 4, "count": 1, "rarity": "rare" }
+      ],
+      "epic": [
+        { "chance": 70, "count": 0 },
+        { "chance": 24, "count": 1, "rarity": "rare" },
+        { "chance": 6, "count": 1, "rarity": "epic" }
+      ]
+    },
+
+    "normal-mid": {
+      "default": [
+        { "chance": 70, "count": 0 },
+        { "chance": 27, "count": 1 },
+        { "chance": 3, "count": 2 }
+      ],
+      "common": [
+        { "chance": 80, "count": 0 },
+        { "chance": 20, "count": 1, "rarity": "common" }
+      ],
+      "unusual": [
+        { "chance": 72, "count": 0 },
+        { "chance": 24, "count": 1, "rarity": "common" },
+        { "chance": 4, "count": 1, "rarity": "unusual" }
+      ],
+      "rare": [
+        { "chance": 60, "count": 0 },
+        { "chance": 28, "count": 1, "rarity": "unusual" },
+        { "chance": 9, "count": 1, "rarity": "rare" },
+        { "chance": 3, "count": 2, "rarity": "unusual" }
+      ],
+      "epic": [
+        { "chance": 45, "count": 0 },
+        { "chance": 33, "count": 1, "rarity": "rare" },
+        { "chance": 15, "count": 1, "rarity": "epic" },
+        { "chance": 7, "count": 2, "rarity": "rare" }
+      ]
+    },
+
+    "normal-high": {
+      "default": [
+        { "chance": 50, "count": 0 },
+        { "chance": 40, "count": 1 },
+        { "chance": 10, "count": 2 }
+      ],
+      "common": [
+        { "chance": 50, "count": 1, "rarity": "common" },
+        { "chance": 50, "count": 2, "rarity": "common" }
+      ],
+      "unusual": [
+        { "chance": 52, "count": 0 },
+        { "chance": 36, "count": 1, "rarity": "common" },
+        { "chance": 10, "count": 1, "rarity": "unusual" },
+        { "chance": 2, "count": 2, "rarity": "unusual" }
+      ],
+      "rare": [
+        { "chance": 40, "count": 0 },
+        { "chance": 34, "count": 1, "rarity": "unusual" },
+        { "chance": 20, "count": 1, "rarity": "rare" },
+        { "chance": 6, "count": 2, "rarity": "rare" }
+      ],
+      "epic": [
+        { "chance": 25, "count": 0 },
+        { "chance": 40, "count": 1, "rarity": "rare" },
+        { "chance": 25, "count": 1, "rarity": "epic" },
+        { "chance": 10, "count": 2, "rarity": "epic" }
+      ]
+    }
+  }
+}

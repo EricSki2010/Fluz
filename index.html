@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Florr Fan Game</title>
+  <style>
+    /* Fill the tab with no margins/scrollbars; Pixi appends its own canvas. */
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #1a1a1a; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <!-- PixiJS — exposes the global `PIXI` the view subsystem uses. -->
+  <script src="https://cdn.jsdelivr.net/npm/pixi.js@8/dist/pixi.min.js"></script>
+  <!-- PeerJS — exposes the global `Peer` the WebRTC transport uses (host/join).
+       Single-player runs without it; only host/join need it. -->
+  <script src="https://unpkg.com/peerjs@1.5/dist/peerjs.min.js"></script>
+  
+  <!-- Boot: the page is just the PRESENTATION shell. All boot logic — view setup,
+       asset loading, input, the render+input loop, the lobby, and session/world
+       seeding — lives in startup.js (the composition root). -->
+  <script type="module">
+    import { startGame } from "./startup.js";
+    startGame().catch((err) => console.error("startup failed:", err));
+  </script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "comment": "Plains — a prebuilt zone. A STRUCTURE, not an entity. `barrier` describes the impassable wall around the zone (its texture + top/bottom edge subtextures); `floor` describes the ground tile. Fields are intentionally minimal and will grow; instances are placed with their own positions/sizes elsewhere.",
+  "kind": "plains",
+  "barrier": {
+    "solid": true,
+    "texture": "Assets/textures/structures/Barrier.png",
+    "subtextures": {
+      "top": "Assets/textures/structures/BarrierHigher.png",
+      "bottom": "Assets/textures/structures/BarrierLower.png",
+      "outerCorner": "Assets/textures/structures/BarrierOuterCorner.png",
+      "innerCorner": "Assets/textures/structures/BarrierInnerCorner.png"
+    }
+  },
+  "floor": {
+    "texture": "Assets/textures/structures/Grass.png"
+  }
+}

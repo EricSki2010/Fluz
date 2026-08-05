@@ -1,0 +1,29 @@
+{
+  "kind": "petal",
+  "disposition": "allied",
+  "movement": "orbit",
+  "size": 15,
+  "density": 5,
+  "health": 40,
+  "speed": 2,
+  "orbitRadius": 80,
+  "orbitPull": 2,
+  "orbitRigid": true,
+  "orbitSnap": 2,
+  "spin": 3,
+  "stickDepth": 10,
+  "reloadTime": 2.5,
+  "rangeMult": 0,
+  "turnRate": 0,
+  "collider": { "type": "polygon", "shape": "rock" },
+  "collided": {
+    "knockback": { "self": true, "others": true, "allies": false },
+    "doDamage": { "self": true, "other": 20, "allies": 0, "fromAllies": false }
+  },
+  "onUpdate": ["checkIfDead"],
+  "visual": {
+    "type": "polygon",
+    "fill": "#808080",
+    "strokeScale": 0.05
+  }
+}

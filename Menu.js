@@ -27,8 +27,8 @@ const BTN = {
  * @param {{
  *   onJoinServer: (url: string) => Promise<void> | void,
  *   liveServerUrl?: string,
- * }} handlers `liveServerUrl` (if set) adds a one-click "Join Live Server" button
- *   that connects straight to it, so the usual player never types an address.
+ * }} handlers `liveServerUrl` is the server to join. Without it the lobby has nothing
+ *   to offer and says so.
  * @returns {{ close: () => void }}
  */
 export function showMenu({ onJoinServer, liveServerUrl }) {
@@ -48,53 +48,31 @@ export function showMenu({ onJoinServer, liveServerUrl }) {
   const status = el("div", { minHeight: "18px", fontSize: "13px", color: "#9cf" });
   const mkBtn = (label) => el("button", { ...BTN }, label);
 
-  const btnJoinServer = mkBtn("Join Server");
-  // One-click join to the preset live server — the path nearly every player takes.
+  // One-click join to the preset live server — the only way in. The manual
+  // address form is gone: with a single hosted server there was nothing to type that
+  // wasn't already the default, and a URL box invites pasting an address that no longer
+  // exists. Bring it back by re-adding a button that calls `onJoinServer(typedUrl)`.
   const btnJoinLive = liveServerUrl ? mkBtn("Join Live Server") : null;
 
-  /** Back to the main buttons. */
+  /** The main (only) view. */
   function showMain() {
     status.textContent = "";
-    const buttons = btnJoinLive ? [btnJoinLive, btnJoinServer] : [btnJoinServer];
-    panel.replaceChildren(title, ...buttons, status);
+    if (btnJoinLive === null) {
+      // No server configured — say so rather than showing an empty panel with no way
+      // forward. `liveServerUrl` comes from `startup.js`, so this is a build problem.
+      status.textContent = "No server configured.";
+      panel.replaceChildren(title, status);
+      return;
+    }
+    panel.replaceChildren(title, btnJoinLive, status);
   }
 
-  btnJoinServer.onclick = () => showJoinServerForm();
   if (btnJoinLive) btnJoinLive.onclick = async () => {
     status.textContent = "Connecting to live server…";
     btnJoinLive.disabled = true;
     try { await onJoinServer(liveServerUrl); overlay.remove(); }
     catch (e) { status.textContent = "Join failed: " + (e?.message ?? e); btnJoinLive.disabled = false; }
   };
-
-  /** Join a dedicated server: a `wss://` URL input + Connect. The last-used URL is
-   * remembered (localStorage) so a returning player doesn't re-paste it. */
-  function showJoinServerForm() {
-    const label = el("div", { fontSize: "13px", color: "#aaa" }, "Server address");
-    const input = el("input", {
-      padding: "11px", fontSize: "15px", textAlign: "center", borderRadius: "6px",
-      border: "1px solid #555", background: "#111", color: "#eee", width: "100%",
-      boxSizing: "border-box",
-    });
-    input.placeholder = "wss://your-server.trycloudflare.com";
-    input.value = localStorage.getItem("fluz.serverUrl") || "";
-    const connect = mkBtn("Connect");
-    const back = mkBtn("Back");
-    back.onclick = showMain;
-    connect.onclick = async () => {
-      const url = input.value.trim();
-      if (!url) { status.textContent = "Enter a server address."; return; }
-      if (!/^wss?:\/\//.test(url)) { status.textContent = "Address must start with wss:// or ws://"; return; }
-      localStorage.setItem("fluz.serverUrl", url); // remember for next time
-      status.textContent = "Connecting…";
-      connect.disabled = true;
-      try { await onJoinServer(url); overlay.remove(); }
-      catch (e) { status.textContent = "Join failed: " + (e?.message ?? e); connect.disabled = false; }
-    };
-    input.addEventListener("keydown", (e) => { if (e.key === "Enter") connect.click(); });
-    panel.replaceChildren(title, label, input, connect, back, status);
-    input.focus();
-  }
 
   showMain();
   document.body.appendChild(overlay);

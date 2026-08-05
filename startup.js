@@ -185,7 +185,14 @@ export async function startGame() {
     active.client.update(dx, dy, ticker.deltaMS / 1000);
     const camera = active.client.camera; // null until welcomed + view reported
     if (camera) view.draw(active.grid, camera, active.client.renderAlpha());
-    view.drawPlayerHUD(active.client.player, worldId); // screen-space HUD
+    // Account state as one object rather than three positional args — the HUD needs the
+    // value, the last error, and a "did an answer just arrive" edge, and they're only
+    // meaningful together.
+    view.drawPlayerHUD(active.client.player, worldId, {
+      account: active.client.account,
+      error: active.client.accountError,
+      seq: active.client.accountSeq,
+    });
     // In-flight visuals (a petal travelling between hotbar slots). After the HUD, so a
     // slot that just handed its petal to an animation is already hidden this frame.
     view.updateAnimations(ticker.deltaMS / 1000);
@@ -215,6 +222,17 @@ export async function startGame() {
 
   // Quit (pause-menu button): disconnect/stop the session, tear down the HUD, and
   // return to the lobby. Wired into every player HUD via `view.onQuit`.
+  // Opening the account screen asks the server who we are; the answer lands on
+  // `client.account` and the board reads it on the next frame.
+  view.onAccountRequest = () => active?.client.requestAccountInfo();
+  // Form submit -> the matching request. The server validates and answers; whatever
+  // comes back lands on `client.account` / `client.accountError` for the board to show.
+  view.onAccountSubmit = (mode, username, password) => {
+    if (!active) return;
+    if (mode === "signUp") active.client.signUp(username, password);
+    else active.client.signIn(username, password);
+  };
+
   view.onQuit = () => {
     if (active) { try { active.stop(); } catch (e) { console.warn("stop failed:", e); } }
     active = null;

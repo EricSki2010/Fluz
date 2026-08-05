@@ -18,6 +18,7 @@ export const MSG = Object.freeze({
   SNAPSHOT: "snapshot",
   SPAWN: "spawn",     // server → client: a one-shot "these entities just spawned" event
   COMMAND: "command", // client → server: a timestamped, named command (extensible)
+  ACCOUNT: "account", // server → client: who this connection is signed in as (or nobody)
 });
 
 /**
@@ -299,4 +300,39 @@ export function cmdSwapPetal(slot, t) {
  */
 export function cmdSwapAllPetals(t) {
   return command("swapAll", t, {});
+}
+
+/** Ask the server who this connection is signed in as. The answer comes back as an
+ * {@link accountInfo} message. @param {number} t Client timestamp (ms). */
+export function cmdAccountInfo(t) {
+  return command("accountInfo", t, {});
+}
+
+/** Ask the server to CREATE an account and sign this connection into it.
+ * @param {string} username @param {string} password @param {number} t */
+export function cmdSignUp(username, password, t) {
+  return command("signUp", t, { username, password });
+}
+
+/** Ask the server to sign this connection into an existing account.
+ * @param {string} username @param {string} password @param {number} t */
+export function cmdSignIn(username, password, t) {
+  return command("signIn", t, { username, password });
+}
+
+/**
+ * Tell a client which account its connection is acting as.
+ *
+ * `null` means NOT SIGNED IN, and is the honest answer rather than an error — a
+ * connection is allowed to play without one today, so "nobody" is a valid state and the
+ * client renders it as such. Rides the JSON path: low-frequency, and the shape of an
+ * account is going to change as `Server/Account` grows.
+ *
+ * @param {object|null} account The account, or null when the connection has none.
+ * @param {string|null} [error] Why the last attempt failed, for the client to show. An
+ *   error and a null account travel together — the attempt failed AND you're still
+ *   signed out, which are two facts the UI needs at once.
+ */
+export function accountInfo(account, error) {
+  return { type: MSG.ACCOUNT, account: account ?? null, error: error ?? null };
 }

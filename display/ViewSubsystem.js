@@ -58,6 +58,14 @@ export class ViewSubsystem {
     /** What the player HUD's "Quit" button does — set by the app, handed to the
      * player HUD as it's built (see `drawPlayerHUD`). Null → Quit no-ops. */
     this.onQuit = null;
+
+    /** Called when the player opens the account screen — the app wires this to a
+     * `requestAccountInfo()` on its client. Forwarded to the HUD like `onQuit`. */
+    this.onAccountRequest = null;
+
+    /** Called with `("signIn"|"signUp", username, password)` when an account form is
+     * submitted. Forwarded to the HUD like `onQuit`. */
+    this.onAccountSubmit = null;
     /** The local player's HUD — owned by the VIEW (not the player entity), so it
      * PERSISTS across world switches (the entity is demolished + rebuilt on a switch;
      * the HUD must not be). Built lazily in `drawPlayerHUD`, dropped in `clearHUD`. */
@@ -382,15 +390,23 @@ export class ViewSubsystem {
    * @param {any} player The local player entity, or null.
    * @param {string} [worldId] The client's current world id.
    */
-  drawPlayerHUD(player, worldId) {
+  drawPlayerHUD(player, worldId, accountState) {
     if (!player) return;
     if (this.playerHud === null) {
       this.playerHud = playerHUD({ animations: this.animations });
       this.playerHud.onQuit = this.onQuit; // wire the Quit button to the app's handler
+      this.playerHud.onAccountRequest = this.onAccountRequest;
+      this.playerHud.onAccountSubmit = this.onAccountSubmit;
+      // DOM text fields float over the canvas, so the HUD needs to know where it is.
+      this.playerHud.canvas = this.app.canvas;
       this.ui.addChild(this.playerHud);
     }
     // (Re)load the per-world UI on first sight + whenever the world changes.
     if (worldId && this.playerHud.loadedWorld !== worldId) this.playerHud.loadUI(worldId);
+    // Account state, for the board. Passed every frame rather than pushed on change —
+    // it's one assignment, and a HUD rebuilt on a world switch picks up the current
+    // value without anything having to remember to re-push it.
+    this.playerHud.accountState = accountState;
     this.playerHud.update(player, this.screenSize);
   }
 

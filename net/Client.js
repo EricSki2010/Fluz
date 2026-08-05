@@ -28,7 +28,7 @@ import { GameEngine } from "../prediction/Engine.js";
 import { Entity } from "../entities/Entity.js";
 import { WallField } from "../prediction/WallField.js";
 import { lerpAngle } from "../calculations/Angles.js";
-import { cmdMoveDir, cmdMoveToward, cmdStop, cmdView, cmdWarp, cmdSwapPetal, cmdSwapAllPetals, MSG } from "./protocol/Protocol.js";
+import { cmdMoveDir, cmdMoveToward, cmdStop, cmdView, cmdWarp, cmdSwapPetal, cmdSwapAllPetals, cmdAccountInfo, cmdSignUp, cmdSignIn, MSG } from "./protocol/Protocol.js";
 
 /** Monotonic-ish clock in ms (browser `performance.now`, else `Date.now`). @private */
 const now = (typeof performance !== "undefined" && performance.now)
@@ -144,6 +144,17 @@ export class GameClient {
      *  and re-reads it every frame, so adding to it repaints terrain with no rebuild.
      *  Accumulates: snapshots only carry the patch around the player, and ground we
      *  already walked past shouldn't blink out when it leaves the box. */
+    /** Who this connection is signed in as, or `null` for NOT SIGNED IN. Starts null
+     *  and stays null until the server says otherwise — the server owns identity, so
+     *  the client never assumes one. `undefined` means "haven't asked yet", which the
+     *  UI can tell apart from a confirmed "nobody". */
+    this.account = undefined;
+    /** Reason the last account attempt failed, or null. See the ACCOUNT handler. */
+    this.accountError = null;
+    /** Bumped on every account reply. The UI watches this rather than `account` itself:
+     * a failed sign-in leaves `account` exactly as it was, so the VALUE can't tell you an
+     * answer arrived — only a counter can. */
+    this.accountSeq = 0;
     this.floorCells = new Set();
     /** Wall faces learned so far, keyed `"cx,cy,dir"` so a repeat is free. @private */
     this._wallFaces = new Map();
@@ -387,6 +398,17 @@ export class GameClient {
   /** Ask the server to swap every hotbar slot with its reserve at once. Intent only —
    * like {@link GameClient#swapPetal}, the new loadout arrives in the next snapshot. */
   swapAllPetals() { this.conn.send(cmdSwapAllPetals(now())); }
+
+  /** Ask the server who we're signed in as. The answer lands asynchronously in
+   * {@link GameClient#account} and fires `onAccount`. */
+  requestAccountInfo() { this.conn.send(cmdAccountInfo(now())); }
+
+  /** Ask the server to create an account and sign us into it. Result arrives as an
+   * account message — see {@link GameClient#account} / `onAccount`. */
+  signUp(username, password) { this.conn.send(cmdSignUp(username, password, now())); }
+
+  /** Ask the server to sign us into an existing account. */
+  signIn(username, password) { this.conn.send(cmdSignIn(username, password, now())); }
 
   /**
    * Per-frame: send intent, step the local sim (your player + mobs move now), then
@@ -709,6 +731,15 @@ export class GameClient {
       // Ground near the player rides along in the world block — fold it in.
       this._applyGeometry(message.worldId, message.floor, message.walls);
       this._bufferSnapshot(message);
+    } else if (message.type === MSG.ACCOUNT) {
+      // Identity is server-owned; we just record what we're told. `null` is a real
+      // answer ("not signed in"), distinct from the `undefined` we start at.
+      this.account = message.account ?? null;
+      /** Why the last sign-in/sign-up attempt failed, or null. Cleared by any successful
+       * reply, so it never outlives the attempt it describes. */
+      this.accountError = message.error ?? null;
+      this.accountSeq++;
+      this.onAccount?.(this.account, this.accountError);
     } else if (message.type === MSG.SPAWN) {
       // Reliable one-shot spawn signal. The entities themselves still arrive via
       // snapshots (the authority for what's in view) — this just lets the view react

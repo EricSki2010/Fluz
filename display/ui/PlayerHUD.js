@@ -18,6 +18,8 @@ import { makeHud } from "./Hud.js";
 import { button } from "./Button.js";
 import { hotbarSlot } from "../../geometry/HotbarSlot.js";
 import { petalContainer } from "../../geometry/PetalContainer.js";
+import { darken } from "../../geometry/Colors.js";
+import { textField } from "./TextField.js";
 import { entityDef, hasEntityDef } from "../../entities/EntityRegistry.js";
 import { transition } from "../animation/Transition.js";
 import { worldHud } from "./WorldUI.js";
@@ -41,6 +43,37 @@ const BOARD_FILL = 0xb5893f;
 const BOARD_BUILD_SIDE = 400;
 /** Board side as a fraction of the smaller screen dimension. @private */
 const BOARD_SCREEN_FRAC = 0.62;
+/** What the board says when the connection has no account. @private */
+const SIGNED_OUT_TEXT = "You Are Not Signed In";
+/** …and while the answer is still in flight. @private */
+const ACCOUNT_PENDING_TEXT = "…";
+/** The account board's DISPLAY PANEL — an inset screen across the top of the board that
+ * status text is shown in, rather than floating the text on the wood. All measured as
+ * fractions of the board's built side, so the whole thing scales with the board and
+ * these read as proportions rather than pixels. @private */
+const SCREEN_HEIGHT_FRAC = 0.16;  // of the board's side
+const SCREEN_TEXT_FRAC = 0.42;    // of the PANEL's height
+/** Breathing room between the board's inner border and the panel, as a fraction of the
+ * board's side. The panel is sized from the border INWARD rather than from the board's
+ * outer edge — the border is thick (~8.5% of the side) and a panel measured off the
+ * outside creeps under it. @private */
+const SCREEN_GAP_FRAC = 0.045;
+/** Vertical gap between the account board's stacked pieces (panel, then each button),
+ * as a fraction of the board's side. @private */
+const BOARD_STACK_GAP_FRAC = 0.05;
+/** Form metrics, all fractions of the board's built side. @private */
+const FIELD_HEIGHT_FRAC = 0.115;
+const LABEL_TEXT_FRAC = 0.055;
+const FIELD_GAP_FRAC = 0.018;   // label -> its field
+const GROUP_GAP_FRAC = 0.055;   // field -> the next label
+/** Border width fraction used if the container def doesn't state one — matches
+ * `polygonGraphic`'s own default. @private */
+const BOARD_STROKE_SCALE = 0.05;
+/** Panel fill — dark, so it reads as a recess cut into the board rather than a tile
+ * sitting on it. Its border is derived by darkening, same as everything else. @private */
+const SCREEN_FILL = 0x3b2c17;
+/** Text on the panel: warm off-white, for contrast against the dark recess. @private */
+const SCREEN_TEXT_COLOR = 0xf0e2c8;
 /** Petal-container slot side length for the MAIN row, in logical screen px. */
 const SLOT_SIDE = 51;
 /** Rows after the first draw at this fraction of the main row's size — 30% smaller.
@@ -137,6 +170,20 @@ export function playerHUD(deps = {}) {
   let liveUpdaters = [];
   /** The pause dim sprite WHEN this world has a pause menu, else null. @private */
   let pauseDim = null;
+
+  /** `{account, error, seq}` mirrored from the client for the account board:
+   * `account` `undefined` = not asked yet, `null` = signed out, object = signed in;
+   * `error` is why the last attempt failed; `seq` ticks on every reply. Kept here rather
+   * than threaded through every updater — only one piece of UI reads it. */
+  hud.accountState = null;
+  /** Called when the account screen opens, so the app can go ask the server. Wired by
+   * the view, like `onQuit`. */
+  hud.onAccountRequest = null;
+  /** Called with `("signIn" | "signUp", username, password)` when a form is submitted.
+   * The HUD collects the text; the app decides what to do with it. */
+  hud.onAccountSubmit = null;
+  /** The game canvas, so DOM text fields can be positioned over it. Set by the view. */
+  hud.canvas = null;
 
   /** id → builder. Add an entry here, then list the id in a world's `hud:` array. */
   const UI_BUILDERS = {
@@ -348,6 +395,11 @@ export function playerHUD(deps = {}) {
       const accountBtn = button("Account", () => {
         hud.tag("pauseMain").hide();
         hud.tag("pauseAccount").show();
+        // Ask on OPEN rather than on connect: it's the only moment the answer is
+        // looked at, and asking then means the board can't show a stale identity from
+        // before a sign-in. The reply is async — `accountText` shows "…" until it lands.
+        hud.showAccountView?.("root"); // always open on the buttons, not a stale form
+        hud.onAccountRequest?.();
       });
       const quitBtn = button("Quit", () => hud.onQuit?.(), { color: 0x8a3a3a, hover: 0xa84a4a });
       for (const b of [continueBtn, accountBtn, quitBtn]) {
@@ -362,7 +414,158 @@ export function playerHUD(deps = {}) {
       const board = petalContainer(BOARD_BUILD_SIDE, { fill: BOARD_FILL });
       board.zIndex = 1;
       hud.add(board, "pause", "pauseAccount");
+
+      // The display panel: a dark recess across the TOP of the board that status text
+      // lives in. A CHILD of the board, so it inherits the board's scale and everything
+      // below is measured in board-build units — one number (the board's scale) drives
+      // the whole screen.
+      // Size from the board's INNER edge, not its outer one. The board's border is
+      // derived from the container def's `strokeScale`, so read it from there rather
+      // than hardcoding — change the def and the panel still clears it.
+      const boardStroke = (hasEntityDef("petalContainer")
+        ? entityDef("petalContainer").visual?.strokeScale : null) ?? BOARD_STROKE_SCALE;
+      const boardBorder = (BOARD_BUILD_SIDE / Math.SQRT2) * 2 * boardStroke;
+      const boardInner = BOARD_BUILD_SIDE / 2 - boardBorder; // half-extent of clear board
+      const gap = BOARD_BUILD_SIDE * SCREEN_GAP_FRAC;
+      const screenW = (boardInner - gap) * 2;
+      const screenH = BOARD_BUILD_SIDE * SCREEN_HEIGHT_FRAC;
+      const screenY = -boardInner + gap + screenH / 2;
+      const screenBorder = Math.max(2, screenH * 0.06);
+      const panel = new PIXI.Graphics();
+      panel.rect(-screenW / 2, -screenH / 2, screenW, screenH).fill(SCREEN_FILL);
+      panel.rect(-screenW / 2, -screenH / 2, screenW, screenH)
+        .stroke({ color: darken(SCREEN_FILL, 0.35), width: screenBorder });
+      panel.y = screenY;
+      board.addChild(panel);
+
+      // What the panel says about this connection's identity.
+      const accountText = new PIXI.Text({
+        text: SIGNED_OUT_TEXT,
+        style: {
+          fill: SCREEN_TEXT_COLOR,
+          fontSize: screenH * SCREEN_TEXT_FRAC,
+          fontFamily: "system-ui, sans-serif",
+          fontWeight: "700",
+          align: "center",
+        },
+      });
+      accountText.anchor.set(0.5);
+      panel.addChild(accountText);
+
+      // Account actions, stacked under the panel. CHILDREN of the board, like the
+      // panel — so they scale with it and are positioned once in board-build units
+      // rather than re-laid-out every frame. Being children also means they inherit the
+      // board's visibility, so the "pauseAccount" tag hides them without tagging each.
+      //
+      // Both are inert for now: `Server/Account` has nothing behind them yet.
+      const stackGap = BOARD_BUILD_SIDE * BOARD_STACK_GAP_FRAC;
+      const actionWidth = screenW; // line up with the panel above them
+      const createBtn = button("Create Account", () => hud.showAccountView?.("signUp"), { width: actionWidth });
+      const signInBtn = button("Sign In", () => hud.showAccountView?.("signIn"), { width: actionWidth });
+      createBtn.y = screenY + screenH / 2 + stackGap + createBtn.btnHeight / 2;
+      signInBtn.y = createBtn.y + createBtn.btnHeight / 2 + stackGap + signInBtn.btnHeight / 2;
+      board.addChild(createBtn, signInBtn);
+
+      // ---- forms -------------------------------------------------------------
+      // The board has three views: the ROOT (panel + the two buttons above) and a form
+      // for each action. Only one is visible at a time; `showAccountView` swaps them.
+      // Every piece is a child of the board, so all of it scales together and the sizes
+      // below are in board-build units.
+      // The status panel is part of the ROOT view, not board furniture: a form REPLACES
+      // what's on the board, and "You Are Not Signed In" hanging over a sign-in form is
+      // both redundant and stale the moment the form succeeds.
+      const rootView = [panel, createBtn, signInBtn];
+
+      /** Build one labelled form. Returns its nodes plus the fields to read on submit. */
+      function buildForm(mode, submitLabel) {
+        const nodes = [];
+        const fieldH = BOARD_BUILD_SIDE * FIELD_HEIGHT_FRAC;
+        const labelSize = BOARD_BUILD_SIDE * LABEL_TEXT_FRAC;
+        const labelGap = BOARD_BUILD_SIDE * FIELD_GAP_FRAC;
+        const groupGap = BOARD_BUILD_SIDE * GROUP_GAP_FRAC;
+        // Start at the board's inner top — the same line the panel occupies on the root
+        // view. The panel is hidden here, so the form takes the space rather than
+        // leaving a gap where it used to be.
+        let y = -boardInner + gap;
+
+        const fields = [];
+        for (const [caption, isPassword] of [["Username", false], ["Password", true]]) {
+          const label = new PIXI.Text({
+            text: caption,
+            style: { fill: 0x2b2113, fontSize: labelSize, fontFamily: "system-ui, sans-serif", fontWeight: "700" },
+          });
+          label.anchor.set(0.5, 0);
+          label.y = y;
+          nodes.push(label);
+          y += labelSize + labelGap;
+          // A placeholder rect marks where the DOM input goes; the input itself is not a
+          // Pixi object, so this is what the layout can measure and the sync can follow.
+          const slotRect = { y: y + fieldH / 2, h: fieldH };
+          fields.push({ rect: slotRect, field: textField({ password: isPassword, onSubmit: submit }) });
+          y += fieldH + groupGap;
+        }
+
+        const submitBtn = button(submitLabel, () => submit(), { width: screenW });
+        submitBtn.y = y + submitBtn.btnHeight / 2;
+        nodes.push(submitBtn);
+
+        // Where a rejection is shown — under Submit, on the form that caused it, rather
+        // than as a blocking dialog. The server sends the actual reason ("Password must
+        // be at least 5 characters"), which is more use than "invalid".
+        const errorText = new PIXI.Text({
+          text: "",
+          style: {
+            fill: 0x7a1c1c, fontSize: labelSize * 0.85, fontFamily: "system-ui, sans-serif",
+            fontWeight: "700", align: "center", wordWrap: true, wordWrapWidth: screenW,
+          },
+        });
+        errorText.anchor.set(0.5, 0);
+        errorText.y = submitBtn.y + submitBtn.btnHeight / 2 + labelSize * 0.5;
+        nodes.push(errorText);
+
+        function submit() {
+          errorText.text = ""; // clear the last complaint before making a new attempt
+          hud.onAccountSubmit?.(mode, fields[0].field.value, fields[1].field.value);
+        }
+
+        board.addChild(...nodes);
+        return { nodes, fields, errorText };
+      }
+
+      const signInForm = buildForm("signIn", "Submit");
+      const createForm = buildForm("signUp", "Submit");
+
+      /** Which board view is showing. Read by `showAccountView` and the Back button. */
+      let accountView = "root";
+      /** Last account reply the board has acted on, so one answer is handled once. */
+      let lastAccountSeq = -1;
+
+      /** Show one of the board's three views and hide the rest. DOM fields are attached
+       * only while their form is up — see `TextField.setVisible`. @private */
+      function showAccountView(next) {
+        accountView = next;
+        // A form always opens clean — a complaint from a previous attempt shouldn't be
+        // waiting there when you come back to try again.
+        if (next !== "root") {
+          const form = next === "signIn" ? signInForm : createForm;
+          form.errorText.text = "";
+        }
+        for (const n of rootView) n.visible = next === "root";
+        for (const n of signInForm.nodes) n.visible = next === "signIn";
+        for (const n of createForm.nodes) n.visible = next === "signUp";
+        for (const f of signInForm.fields) f.field.setVisible(next === "signIn");
+        for (const f of createForm.fields) f.field.setVisible(next === "signUp");
+      }
+      hud.showAccountView = showAccountView;
+      /** Current board view, so Back knows whether to pop a form or leave the screen. */
+      hud.accountView = () => accountView;
+      showAccountView("root");
+
       const backBtn = button("Back", () => {
+        // Pop ONE level. From a form that's the account root; from the root it's the
+        // pause menu. Without this a form would be a dead end — the only way out would
+        // be unpausing, which throws the typed values away anyway.
+        if (hud.accountView && hud.accountView() !== "root") { hud.showAccountView("root"); return; }
         hud.tag("pauseAccount").hide();
         hud.tag("pauseMain").show();
       });
@@ -387,6 +590,45 @@ export function playerHUD(deps = {}) {
         // SMALLER screen dimension so it always fits, portrait or landscape.
         const side = Math.min(screen.width, screen.height) * BOARD_SCREEN_FRAC;
         board.scale.set(side / BOARD_BUILD_SIDE);
+        // Three states, and they're genuinely different: `undefined` = haven't heard
+        // back, `null` = heard back and it's nobody, an object = signed in. Showing
+        // "not signed in" while the request is still in flight would be a lie that
+        // happens to usually come true.
+        // DOM inputs follow the board. Their y is a board-build offset; converting is
+        // the same scale the board itself uses, so they can't drift from the artwork.
+        const k = board.scale.x;
+        for (const form of [signInForm, createForm]) {
+          for (const f of form.fields) {
+            f.field.syncTo(hud.canvas, screen.width, {
+              x: board.x - (screenW / 2) * k, y: board.y + (f.rect.y - f.rect.h / 2) * k,
+              w: screenW * k, h: f.rect.h * k,
+            });
+          }
+        }
+        const state = hud.accountState;
+        const acct = state ? state.account : undefined;
+
+        // A reply just landed AND we're sitting on a form: succeed back to the root, or
+        // stay put and say why. Keyed on `seq`, not on the account value — a rejected
+        // attempt leaves the value untouched, so only the counter marks an answer.
+        if (state && state.seq !== lastAccountSeq) {
+          lastAccountSeq = state.seq;
+          if (accountView !== "root") {
+            const form = accountView === "signIn" ? signInForm : createForm;
+            if (acct) {
+              // Signed in — creating an account signs you into it too, so both land here.
+              for (const f of form.fields) f.field.clear();
+              form.errorText.text = "";
+              showAccountView("root");
+            } else {
+              form.errorText.text = state.error ?? "Invalid username or password.";
+            }
+          }
+        }
+
+        accountText.text = acct === undefined ? ACCOUNT_PENDING_TEXT
+          : acct === null ? SIGNED_OUT_TEXT
+          : (acct.username ?? "Signed In");
         board.x = cx; board.y = cy - backBtn.btnHeight / 2;
         backBtn.x = cx;
         backBtn.y = board.y + side / 2 + BTN_GAP + backBtn.btnHeight / 2;
